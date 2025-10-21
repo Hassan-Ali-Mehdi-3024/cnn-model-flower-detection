@@ -1,0 +1,327 @@
+import streamlit as st
+import numpy as np
+from PIL import Image
+import io
+import os
+
+# Page configuration
+st.set_page_config(
+    page_title="Flower Recognition",
+    page_icon="🌸",
+    layout="centered",
+    initial_sidebar_state="expanded"
+)
+
+# Custom CSS for better appearance
+st.markdown("""
+    <style>
+    .main {
+        padding: 2rem;
+    }
+    .stProgress > div > div > div > div {
+        background-color: #FF6B6B;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+
+# Title and description
+st.title("🌸 Flower Recognition Model")
+st.markdown("### Upload an image of a flower to identify its type")
+st.markdown("---")
+
+# Sidebar configuration
+with st.sidebar:
+    st.header("⚙️ Model Configuration")
+    
+    # Model parameters (can be adjusted based on actual model)
+    st.subheader("Image Settings")
+    img_height = st.number_input("Image Height", value=180, min_value=32, max_value=512, step=16)
+    img_width = st.number_input("Image Width", value=180, min_value=32, max_value=512, step=16)
+    
+    st.subheader("Flower Classes")
+    use_custom_classes = st.checkbox("Use custom class names", value=False)
+    
+    if use_custom_classes:
+        num_classes = st.number_input("Number of classes", value=5, min_value=2, max_value=20)
+        default_classes = [f"Class_{i}" for i in range(num_classes)]
+        class_names_input = st.text_area(
+            "Enter class names (one per line)", 
+            value="\n".join(default_classes),
+            height=150
+        )
+        FLOWER_CLASSES = [name.strip() for name in class_names_input.split('\n') if name.strip()]
+    else:
+        # Common flower datasets: Oxford Flowers, TF Flowers
+        FLOWER_CLASSES = ['daisy', 'dandelion', 'rose', 'sunflower', 'tulip']
+    
+    st.info(f"Current classes: {len(FLOWER_CLASSES)}")
+    
+    st.subheader("About")
+    st.markdown("""
+    This app uses a trained Keras deep learning model for flower classification.
+    
+    **Tips for best results:**
+    - Use clear, well-lit images
+    - Center the flower in the frame
+    - Avoid busy backgrounds
+    - Supported formats: JPG, JPEG, PNG
+    """)
+
+# Load the model with caching
+@st.cache_resource
+def load_model():
+    try:
+        # Try importing tensorflow first
+        try:
+            import tensorflow as tf
+            model = tf.keras.models.load_model('flower_recognition_model.keras')
+            return model, "TensorFlow"
+        except ImportError:
+            # Fall back to keras
+            import keras
+            model = keras.models.load_model('flower_recognition_model.keras')
+            return model, "Keras"
+    except Exception as e:
+        st.error(f"❌ Error loading model: {str(e)}")
+        st.info("Please ensure 'flower_recognition_model.keras' is in the same directory as this app.")
+        return None, None
+
+# Load the model
+model, backend = load_model()
+
+if model is not None:
+    st.success(f"✅ Model loaded successfully (Backend: {backend})")
+    
+    # Try to display model info
+    with st.expander("📊 Model Information"):
+        try:
+            st.write(f"**Input Shape:** {model.input_shape}")
+            st.write(f"**Output Shape:** {model.output_shape}")
+            st.write(f"**Number of Parameters:** {model.count_params():,}")
+            
+            # Show layer count
+            st.write(f"**Number of Layers:** {len(model.layers)}")
+        except:
+            st.write("Model information not available")
+
+# Image preprocessing function
+def preprocess_image(image, target_size):
+    """
+    Preprocess the uploaded image for model prediction.
+    """
+    # Convert to RGB if needed
+    if image.mode != 'RGB':
+        image = image.convert('RGB')
+    
+    # Resize image to target size
+    image_resized = image.resize(target_size)
+    
+    # Convert to array
+    img_array = np.array(image_resized)
+    
+    # Normalize pixel values to [0, 1]
+    img_array = img_array.astype('float32') / 255.0
+    
+    # Add batch dimension
+    img_array = np.expand_dims(img_array, axis=0)
+    
+    return img_array, image_resized
+
+# Main content area
+st.markdown("### 📤 Upload Your Image")
+
+# File uploader with more options
+col1, col2 = st.columns([2, 1])
+
+with col1:
+    uploaded_file = st.file_uploader(
+        "Choose a flower image...", 
+        type=["jpg", "jpeg", "png"],
+        help="Upload a clear image of a flower",
+        label_visibility="collapsed"
+    )
+
+with col2:
+    if uploaded_file:
+        file_size = len(uploaded_file.getvalue()) / 1024  # KB
+        st.metric("File Size", f"{file_size:.1f} KB")
+
+# Process uploaded image
+if uploaded_file is not None and model is not None:
+    try:
+        # Load the image
+        image = Image.open(uploaded_file)
+        
+        # Display original image info
+        with st.expander("📷 Original Image Info"):
+            st.write(f"**Format:** {image.format}")
+            st.write(f"**Mode:** {image.mode}")
+            st.write(f"**Size:** {image.size[0]} x {image.size[1]} pixels")
+        
+        # Create two columns for display
+        col1, col2 = st.columns([1, 1])
+        
+        with col1:
+            st.subheader("📸 Uploaded Image")
+            st.image(image, use_container_width=True, caption="Original Image")
+        
+        # Make prediction
+        with col2:
+            st.subheader("🔍 Analysis Results")
+            
+            with st.spinner('🌸 Analyzing the flower...'):
+                try:
+                    # Preprocess the image
+                    target_size = (img_width, img_height)
+                    processed_image, resized_img = preprocess_image(image, target_size)
+                    
+                    # Get predictions
+                    predictions = model.predict(processed_image, verbose=0)
+                    predicted_class_idx = np.argmax(predictions[0])
+                    confidence = predictions[0][predicted_class_idx] * 100
+                    
+                    # Display the top prediction with styling
+                    st.markdown(f"""
+                    <div style='padding: 20px; background-color: #f0f2f6; border-radius: 10px; margin: 10px 0;'>
+                        <h3 style='color: #FF6B6B; margin: 0;'>🌺 {FLOWER_CLASSES[predicted_class_idx].title()}</h3>
+                        <p style='font-size: 24px; margin: 10px 0;'><strong>{confidence:.2f}%</strong> confidence</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                    
+                    # Show processed image
+                    with st.expander("View Processed Image"):
+                        st.image(resized_img, caption=f"Resized to {img_width}x{img_height}", use_container_width=True)
+                
+                except Exception as e:
+                    st.error(f"❌ Error making prediction: {str(e)}")
+                    st.info("💡 Try adjusting the image size settings in the sidebar.")
+        
+        # Full width section for all predictions
+        st.markdown("---")
+        st.subheader("📊 Detailed Predictions")
+        
+        # Create a more detailed view
+        if predictions is not None:
+            # Sort predictions by probability
+            pred_indices = np.argsort(predictions[0])[::-1]
+            
+            for idx in pred_indices:
+                flower_name = FLOWER_CLASSES[idx] if idx < len(FLOWER_CLASSES) else f"Class {idx}"
+                prob = predictions[0][idx]
+                
+                # Color code based on probability
+                if prob > 0.5:
+                    color = "#4CAF50"  # Green
+                elif prob > 0.2:
+                    color = "#FF9800"  # Orange
+                else:
+                    color = "#9E9E9E"  # Grey
+                
+                col_a, col_b, col_c = st.columns([2, 3, 1])
+                with col_a:
+                    st.write(f"**{flower_name.title()}**")
+                with col_b:
+                    st.progress(float(prob))
+                with col_c:
+                    st.write(f"{prob*100:.2f}%")
+        
+        # Download section
+        st.markdown("---")
+        st.subheader("💾 Save Results")
+        
+        # Prepare result text
+        result_text = f"""Flower Recognition Results
+================================
+Predicted Flower: {FLOWER_CLASSES[predicted_class_idx].title()}
+Confidence: {confidence:.2f}%
+
+All Predictions:
+"""
+        for idx in pred_indices:
+            flower_name = FLOWER_CLASSES[idx] if idx < len(FLOWER_CLASSES) else f"Class {idx}"
+            prob = predictions[0][idx]
+            result_text += f"  - {flower_name.title()}: {prob*100:.2f}%\n"
+        
+        st.download_button(
+            label="📥 Download Results as Text",
+            data=result_text,
+            file_name="flower_prediction_results.txt",
+            mime="text/plain"
+        )
+                
+    except Exception as e:
+        st.error(f"❌ Error processing image: {str(e)}")
+        st.info("Please try uploading a different image.")
+
+elif uploaded_file is None:
+    # Show welcome message and instructions
+    st.info("👆 Please upload a flower image to get started!")
+    
+    # Create attractive info cards
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("""
+        <div style='padding: 20px; background-color: #e3f2fd; border-radius: 10px; text-align: center;'>
+            <h3>📤</h3>
+            <h4>Upload</h4>
+            <p>Select a flower image from your device</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown("""
+        <div style='padding: 20px; background-color: #f3e5f5; border-radius: 10px; text-align: center;'>
+            <h3>🔍</h3>
+            <h4>Analyze</h4>
+            <p>AI model processes the image instantly</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown("""
+        <div style='padding: 20px; background-color: #e8f5e9; border-radius: 10px; text-align: center;'>
+            <h3>🌸</h3>
+            <h4>Identify</h4>
+            <p>Get flower type with confidence score</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Sample images section
+    st.markdown("### 💡 Tips for Best Results")
+    tips_col1, tips_col2 = st.columns(2)
+    
+    with tips_col1:
+        st.markdown("""
+        **✅ Do:**
+        - Use clear, focused images
+        - Ensure good lighting
+        - Center the flower in frame
+        - Use high-resolution images
+        """)
+    
+    with tips_col2:
+        st.markdown("""
+        **❌ Avoid:**
+        - Blurry or dark images
+        - Multiple flowers in one image
+        - Heavy filters or edits
+        - Extreme angles
+        """)
+
+elif model is None:
+    st.warning("⚠️ Model not loaded. Please check that the model file exists in the correct location.")
+
+# Footer
+st.markdown("---")
+footer_col1, footer_col2, footer_col3 = st.columns([1, 2, 1])
+
+with footer_col2:
+    st.markdown("""
+    <div style='text-align: center;'>
+        <p>Built with <strong>Streamlit</strong> 🎈 and <strong>Keras</strong> 🧠</p>
+        <p style='font-size: 12px; color: #666;'>Deep Learning Flower Recognition System</p>
+    </div>
+    """, unsafe_allow_html=True)
