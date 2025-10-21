@@ -29,18 +29,86 @@ st.title("🌸 Flower Recognition Model")
 st.markdown("### Upload an image of a flower to identify its type")
 st.markdown("---")
 
+# Load the model with caching
+@st.cache_resource
+def load_model():
+    try:
+        # Try importing tensorflow first
+        try:
+            import tensorflow as tf
+            model = tf.keras.models.load_model('flower_recognition_model.keras')
+            backend = "TensorFlow"
+        except ImportError:
+            # Fall back to keras
+            import keras
+            model = keras.models.load_model('flower_recognition_model.keras')
+            backend = "Keras"
+        
+        # Try to detect the correct input size from model
+        try:
+            input_shape = model.input_shape
+            if input_shape and len(input_shape) >= 3:
+                detected_height = input_shape[1] if input_shape[1] else 180
+                detected_width = input_shape[2] if input_shape[2] else 180
+                return model, backend, (detected_height, detected_width)
+        except:
+            pass
+        
+        return model, backend, (180, 180)  # Default fallback
+        
+    except Exception as e:
+        st.error(f"❌ Error loading model: {str(e)}")
+        st.info("Please ensure 'flower_recognition_model.keras' is in the same directory as this app.")
+        return None, None, (180, 180)
+
+# Load the model
+model, backend, detected_size = load_model()
+
+# Use detected size or allow override
+default_height, default_width = detected_size
+
 # Sidebar configuration
 with st.sidebar:
     st.header("⚙️ Model Configuration")
     
     # Model parameters (can be adjusted based on actual model)
     st.subheader("Image Settings")
-    st.info("💡 If you see shape errors, try: 160, 144, 128, or 224")
-    st.caption("📏 Your uploaded image (any size) will be automatically resized to these dimensions")
-    img_height = st.number_input("Image Height", value=160, min_value=32, max_value=512, step=16, 
-                                  help="Height the image will be resized to before prediction")
-    img_width = st.number_input("Image Width", value=160, min_value=32, max_value=512, step=16,
-                                 help="Width the image will be resized to before prediction")
+    
+    # Quick size presets
+    st.write("**Quick Presets:**")
+    preset_cols = st.columns(4)
+    preset_clicked = None
+    with preset_cols[0]:
+        if st.button("128x128", use_container_width=True):
+            preset_clicked = 128
+    with preset_cols[1]:
+        if st.button("144x144", use_container_width=True):
+            preset_clicked = 144
+    with preset_cols[2]:
+        if st.button("160x160", use_container_width=True):
+            preset_clicked = 160
+    with preset_cols[3]:
+        if st.button("224x224", use_container_width=True):
+            preset_clicked = 224
+    
+    if preset_clicked:
+        st.session_state.img_size = preset_clicked
+    
+    # Get the size from session state or use default (144 is most likely based on 7776 flattened)
+    if 'img_size' not in st.session_state:
+        st.session_state.img_size = 144
+    
+    current_size = st.session_state.img_size
+    
+    st.info(f"💡 Current: {current_size}x{current_size} | Model expects: {default_height}x{default_width}")
+    st.caption("📏 Your uploaded image (any size) will be automatically resized")
+    
+    img_height = st.number_input("Image Height", value=current_size, min_value=32, max_value=512, step=16, 
+                                  help="Height the image will be resized to before prediction",
+                                  key="height_input")
+    img_width = st.number_input("Image Width", value=current_size, min_value=32, max_value=512, step=16,
+                                 help="Width the image will be resized to before prediction",
+                                 key="width_input")
     
     st.subheader("Flower Classes")
     use_custom_classes = st.checkbox("Use custom class names", value=False)
@@ -71,28 +139,7 @@ with st.sidebar:
     - Supported formats: JPG, JPEG, PNG
     """)
 
-# Load the model with caching
-@st.cache_resource
-def load_model():
-    try:
-        # Try importing tensorflow first
-        try:
-            import tensorflow as tf
-            model = tf.keras.models.load_model('flower_recognition_model.keras')
-            return model, "TensorFlow"
-        except ImportError:
-            # Fall back to keras
-            import keras
-            model = keras.models.load_model('flower_recognition_model.keras')
-            return model, "Keras"
-    except Exception as e:
-        st.error(f"❌ Error loading model: {str(e)}")
-        st.info("Please ensure 'flower_recognition_model.keras' is in the same directory as this app.")
-        return None, None
-
-# Load the model
-model, backend = load_model()
-
+# Display model status
 if model is not None:
     st.success(f"✅ Model loaded successfully (Backend: {backend})")
     
