@@ -132,7 +132,7 @@ with st.sidebar:
         FLOWER_CLASSES = [name.strip() for name in class_names_input.split('\n') if name.strip()]
     else:
         # Common flower datasets: Oxford Flowers, TF Flowers
-        FLOWER_CLASSES = ['Lilly', 'Sunflower', 'Tulip', 'Lotus', 'Orchid']
+        FLOWER_CLASSES = ['Lilly', 'Lotus', 'Orchid', 'Sunflower', 'Tulip']
     
     st.info(f"Current classes: {len(FLOWER_CLASSES)}")
     
