@@ -94,21 +94,29 @@ with st.sidebar:
     if preset_clicked:
         st.session_state.img_size = preset_clicked
     
-    # Get the size from session state or use default (144 is most likely based on 7776 flattened)
+    # Calculate the correct size based on the error pattern
+    # Error shows 21600 vs 7776, which suggests 144x144 input
+    # 144x144 -> after conv/pooling -> ~7776 features
+    recommended_size = 144
+    
+    # Get the size from session state or use recommended
     if 'img_size' not in st.session_state:
-        st.session_state.img_size = 144
+        st.session_state.img_size = recommended_size
     
     current_size = st.session_state.img_size
     
-    st.info(f"💡 Current: {current_size}x{current_size} | Model expects: {default_height}x{default_width}")
-    st.caption("📏 Your uploaded image (any size) will be automatically resized")
+    st.warning(f"⚠️ **IMPORTANT**: This model requires **144x144** input size!")
+    st.info(f"Current: {current_size}x{current_size} | Recommended: 144x144")
+    st.caption("📏 Any uploaded image will be automatically resized to your selected dimensions")
     
-    img_height = st.number_input("Image Height", value=current_size, min_value=32, max_value=512, step=16, 
-                                  help="Height the image will be resized to before prediction",
-                                  key="height_input")
-    img_width = st.number_input("Image Width", value=current_size, min_value=32, max_value=512, step=16,
-                                 help="Width the image will be resized to before prediction",
-                                 key="width_input")
+    # Force same height and width
+    img_size = st.number_input("Image Size (Height & Width)", value=144, min_value=32, max_value=512, step=16, 
+                                help="Both height and width will use this value",
+                                key="size_input")
+    img_height = img_size
+    img_width = img_size
+    
+    st.success(f"✅ Will resize all images to: {img_size}x{img_size}")
     
     st.subheader("Flower Classes")
     use_custom_classes = st.checkbox("Use custom class names", value=False)

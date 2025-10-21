@@ -1,5 +1,20 @@
 # Quick Start Guide
 
+## ⚠️ IMPORTANT: Model Image Size
+
+**Your model requires exactly 144x144 pixel input!**
+
+The app is now configured to use 144x144 by default. When you upload any image (even 1200x1200), it will be automatically resized to 144x144 before prediction.
+
+**Why 144x144?**
+- Based on the error messages, your model architecture expects this size
+- The dense layer expects 7,776 features after convolution
+- This comes from 144x144 input after pooling/convolution layers
+
+**No action needed** - just upload your images and the app handles the rest!
+
+---
+
 ## Getting Started in 3 Steps
 
 ### Step 1: Setup Environment

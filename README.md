@@ -66,13 +66,23 @@ streamlit run app.py
 
 ## 🌺 Default Flower Types
 
-- Daisy
-- Dandelion
-- Rose
-- Sunflower
+- Orchid
+- Sunflower  
 - Tulip
+- Lotus
+- Lilly
 
 *These can be customized in the sidebar settings*
+
+## ⚙️ Important: Image Size Configuration
+
+**This model requires 144x144 pixel input images.** The app automatically resizes any uploaded image to this size.
+
+- **Default Setting**: 144x144 pixels (required for this model)
+- **Your Input**: Can be any size (e.g., 1200x1200, 800x600, etc.)
+- **Processing**: Automatically resized to 144x144 before prediction
+
+If you trained your model with a different size, adjust the "Image Size" setting in the sidebar.
 
 ## ⚙️ Configuration
 
