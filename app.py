@@ -35,8 +35,12 @@ with st.sidebar:
     
     # Model parameters (can be adjusted based on actual model)
     st.subheader("Image Settings")
-    img_height = st.number_input("Image Height", value=180, min_value=32, max_value=512, step=16)
-    img_width = st.number_input("Image Width", value=180, min_value=32, max_value=512, step=16)
+    st.info("💡 If you see shape errors, try: 160, 144, 128, or 224")
+    st.caption("📏 Your uploaded image (any size) will be automatically resized to these dimensions")
+    img_height = st.number_input("Image Height", value=160, min_value=32, max_value=512, step=16, 
+                                  help="Height the image will be resized to before prediction")
+    img_width = st.number_input("Image Width", value=160, min_value=32, max_value=512, step=16,
+                                 help="Width the image will be resized to before prediction")
     
     st.subheader("Flower Classes")
     use_custom_classes = st.checkbox("Use custom class names", value=False)
@@ -52,7 +56,7 @@ with st.sidebar:
         FLOWER_CLASSES = [name.strip() for name in class_names_input.split('\n') if name.strip()]
     else:
         # Common flower datasets: Oxford Flowers, TF Flowers
-        FLOWER_CLASSES = ['daisy', 'dandelion', 'rose', 'sunflower', 'tulip']
+        FLOWER_CLASSES = ['Orchid', 'Sunflower', 'Tulip', 'Lotus', 'Lilly']
     
     st.info(f"Current classes: {len(FLOWER_CLASSES)}")
     
@@ -108,21 +112,23 @@ if model is not None:
 def preprocess_image(image, target_size):
     """
     Preprocess the uploaded image for model prediction.
+    Handles any input size (e.g., 1200x1200) and resizes to target size.
     """
     # Convert to RGB if needed
     if image.mode != 'RGB':
         image = image.convert('RGB')
     
-    # Resize image to target size
-    image_resized = image.resize(target_size)
+    # Resize image to exact target size using high-quality resampling
+    # This handles any input size (1200x1200, 800x600, etc.) -> target_size
+    image_resized = image.resize(target_size, Image.Resampling.LANCZOS)
     
-    # Convert to array
-    img_array = np.array(image_resized)
+    # Convert to numpy array
+    img_array = np.array(image_resized, dtype=np.float32)
     
-    # Normalize pixel values to [0, 1]
-    img_array = img_array.astype('float32') / 255.0
+    # Normalize pixel values to [0, 1] range
+    img_array = img_array / 255.0
     
-    # Add batch dimension
+    # Add batch dimension: (height, width, channels) -> (1, height, width, channels)
     img_array = np.expand_dims(img_array, axis=0)
     
     return img_array, image_resized
@@ -154,9 +160,12 @@ if uploaded_file is not None and model is not None:
         
         # Display original image info
         with st.expander("📷 Original Image Info"):
-            st.write(f"**Format:** {image.format}")
-            st.write(f"**Mode:** {image.mode}")
-            st.write(f"**Size:** {image.size[0]} x {image.size[1]} pixels")
+            st.write(f"**Original Format:** {image.format}")
+            st.write(f"**Original Mode:** {image.mode}")
+            st.write(f"**Original Size:** {image.size[0]} x {image.size[1]} pixels")
+            st.write(f"**Will be resized to:** {img_width} x {img_height} pixels")
+            if image.size[0] != img_width or image.size[1] != img_height:
+                st.caption("✅ Automatic resizing will be applied for model compatibility")
         
         # Create two columns for display
         col1, col2 = st.columns([1, 1])
@@ -193,8 +202,33 @@ if uploaded_file is not None and model is not None:
                         st.image(resized_img, caption=f"Resized to {img_width}x{img_height}", use_container_width=True)
                 
                 except Exception as e:
-                    st.error(f"❌ Error making prediction: {str(e)}")
-                    st.info("💡 Try adjusting the image size settings in the sidebar.")
+                    error_message = str(e)
+                    st.error(f"❌ Error making prediction: {error_message}")
+                    
+                    # Provide helpful suggestions based on error
+                    if "incompatible" in error_message.lower() or "shape" in error_message.lower():
+                        st.warning("🔧 **Shape Mismatch Detected!**")
+                        st.info("""
+                        **Try these image sizes in the sidebar:**
+                        - **160 x 160** (most common)
+                        - **144 x 144**
+                        - **128 x 128**
+                        - **224 x 224**
+                        
+                        The model expects a specific input size. Adjust both height and width to the same value.
+                        """)
+                        
+                        # Suggest automatic sizes to try
+                        with st.expander("🤖 Auto-detect recommended sizes"):
+                            st.write("Based on the error, try these dimensions:")
+                            common_sizes = [128, 144, 160, 180, 224]
+                            cols = st.columns(5)
+                            for i, size in enumerate(common_sizes):
+                                with cols[i]:
+                                    if st.button(f"{size}x{size}", key=f"size_{size}"):
+                                        st.info(f"Please manually set both Height and Width to {size} in the sidebar, then reupload the image.")
+                    else:
+                        st.info("💡 Try adjusting the image size settings in the sidebar or use a different image.")
         
         # Full width section for all predictions
         st.markdown("---")

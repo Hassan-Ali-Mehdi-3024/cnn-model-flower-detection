@@ -40,14 +40,15 @@ streamlit run app.py
 
 2. **Option B: Edit Code** (Permanent)
    - Open `app.py`
-   - Find line: `FLOWER_CLASSES = ['daisy', 'dandelion', 'rose', 'sunflower', 'tulip']`
+   - Find line: `FLOWER_CLASSES = ['Orchid', 'Sunflower', 'Tulip', 'Lotus', 'Lilly']`
    - Replace with your classes: `FLOWER_CLASSES = ['class1', 'class2', 'class3']`
 
 ### If Your Model Has Different Input Size
 
 1. **Option A: Use the Sidebar** (Easy)
    - Adjust "Image Height" and "Image Width" in sidebar
-   - Common sizes: 224, 180, 160, 128
+   - Common sizes: 160, 144, 128, 224, 180
+   - **Start with 160x160** (this is the most common for your model)
 
 2. **Option B: Edit Code** (Permanent)
    - Open `app.py`
@@ -93,6 +94,19 @@ The input shape tells you: `(batch_size, height, width, channels)`
 ---
 
 ## Common Issues and Solutions
+
+### Issue: "Input shape incompatible" or "expected axis -1 to have value X"
+**Solution:** 
+- **The app automatically resizes images** - your 1200x1200 image will be resized to match model requirements
+- Change the **Image Height** and **Image Width** in the sidebar
+- Start with **160x160** (default), then try: 144, 128, or 224
+- Make sure both height and width are the **same value**
+- The error means your current size setting doesn't match what the model expects
+
+**Quick Fix:**
+1. Go to sidebar → Image Settings
+2. Set both Height and Width to **160**
+3. Reupload your image (any size will work - it gets auto-resized!)
 
 ### Issue: "Model not loading"
 **Solution:** 
