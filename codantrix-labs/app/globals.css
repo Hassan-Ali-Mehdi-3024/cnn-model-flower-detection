@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+:root {
+  /* Light Mode Colors */
+  --color-primary: #f15a2f;
+  --color-light-bg: #fffdf2;
+  --color-dark-text: #1c1e20;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-info: #3b82f6;
+  
+  /* Theme-aware variables */
+  --background: #fffdf2;
+  --foreground: #1c1e20;
+  --card-background: #ffffff;
+  --border-color: #e5e5e5;
+  --muted: #6b7280;
+  --accent: #f15a2f;
+}
+
+[data-theme="dark"] {
+  /* Dark Mode Colors */
+  --background: #1c1e20;
+  --foreground: #fffdf2;
+  --card-background: #2a2c2e;
+  --border-color: #3a3c3e;
+  --muted: #9ca3af;
+  --accent: #f15a2f;
+}
+
+@theme inline {
+  --color-primary: #f15a2f;
+  --color-light-bg: #fffdf2;
+  --color-dark-text: #1c1e20;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-info: #3b82f6;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card-background: var(--card-background);
+  --color-border: var(--border-color);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.6;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 0.5em;
+}
+
+h1 {
+  font-size: 2.5rem;
+}
+
+h2 {
+  font-size: 2rem;
+}
+
+h3 {
+  font-size: 1.75rem;
+}
+
+p {
+  margin-bottom: 1rem;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: opacity 0.2s ease;
+}
+
+a:hover {
+  opacity: 0.8;
+}
+
+button {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+input, textarea, select {
+  font-family: inherit;
+}
+
+/* Smooth transitions for theme changes */
+* {
+  transition-property: background-color, border-color, color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 200ms;
+}
